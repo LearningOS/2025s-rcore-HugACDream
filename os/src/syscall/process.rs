@@ -39,7 +39,32 @@ pub fn sys_get_time(ts: *mut TimeVal, _tz: usize) -> isize {
 }
 
 // TODO: implement the syscall
+static mut SYSCALL_COUNTS: [usize; 512] = [0; 512];
+
 pub fn sys_trace(_trace_request: usize, _id: usize, _data: usize) -> isize {
     trace!("kernel: sys_trace");
-    -1
+    match _trace_request {
+        0 => {
+            let ptr = _id as *const u8;
+            unsafe { *ptr as isize}
+        }
+        1 => {
+            let ptr = _id as *mut u8;
+            unsafe {
+                *ptr = _data as u8;
+            }
+            0
+        }
+        2 => {
+            let id = _id;
+            let count = unsafe {
+                SYSCALL_COUNTS.get_mut(id).map(|c| {
+                    *c += 1;
+                    *c
+                }).unwrap_or(1)
+            };
+            count as isize
+        }
+        _ => -1
+    }
 }
