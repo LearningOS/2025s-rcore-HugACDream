@@ -12,6 +12,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly  # 如果项目需要 nightly
+          target: riscv64gc-unknown-none-elf
+          override: true
+      - run: cargo build --target riscv64gc-unknown-none-elf
       - name: Build doc
         run: |
           git clone https://github.com/LearningOS/rCore-Tutorial-Test-2025S.git user
