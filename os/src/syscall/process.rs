@@ -1,6 +1,6 @@
 //! Process management syscalls
 use crate::{
-    task::{exit_current_and_run_next, suspend_current_and_run_next},
+    task::{exit_current_and_run_next, suspend_current_and_run_next, current_task},
     timer::get_time_us,
 };
 
@@ -39,32 +39,29 @@ pub fn sys_get_time(ts: *mut TimeVal, _tz: usize) -> isize {
 }
 
 // TODO: implement the syscall
-static mut SYSCALL_COUNTS: [usize; 512] = [0; 512];
-
-pub fn sys_trace(_trace_request: usize, _id: usize, _data: usize) -> isize {
+pub fn sys_trace(trace_request: usize, id: usize, data: usize) -> isize {
     trace!("kernel: sys_trace");
-    match _trace_request {
+    match trace_request {
         0 => {
-            let ptr = _id as *const u8;
-            unsafe { *ptr as isize}
+            // 读取用户空间 id 地址的 u8
+            let ptr = id as *const u8;
+            unsafe { *ptr as isize }
         }
         1 => {
-            let ptr = _id as *mut u8;
-            unsafe {
-                *ptr = _data as u8;
-            }
+            // 写入 data 的低 8 位到用户空间 id 地址
+            let ptr = id as *mut u8;
+            unsafe { *ptr = data as u8; }
             0
         }
         2 => {
-            let id = _id;
-            let count = unsafe {
-                SYSCALL_COUNTS.get_mut(id).map(|c| {
-                    *c += 1;
-                    *c
-                }).unwrap_or(1)
-            };
-            count as isize
+            // 查询当前任务调用编号为 id 的 syscall 次数
+            if let Some(task) = current_task() {
+                if id < 512 {
+                return task.syscall_counts[id] as isize;
+            }
+            }
+            -1
         }
-        _ => -1
+        _ => -1,
     }
 }
